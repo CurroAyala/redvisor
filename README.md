@@ -17,7 +17,7 @@ La interfaz principal está dividida en tres secciones:
 
 ### 1. 💻 Dispositivo
 Muestra la información de red vital del equipo:
-- **Direcciones IP públicas:** IPv4 e IPv6.
+- **Direcciones IP públicas y privadas:** IPv4 e IPv6.
 - **Dirección MAC.**
 - **Escáner de puertos locales:** visualiza qué puertos del dispositivo están abiertos y expuestos a la red.
 
