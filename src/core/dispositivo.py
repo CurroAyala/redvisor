@@ -24,7 +24,7 @@ def obtener_ip4_privada():
 # OBTENER LA IPv4 PÚBLICA
 def obtener_ip4_publica():
     try:
-        respuesta = urllib.request.urlopen('https://ident.me', timeout=5)
+        respuesta = urllib.request.urlopen('https://4.ident.me', timeout=5)
         ip4_publica = respuesta.read().decode('utf8')
         return ip4_publica
     except Exception:
