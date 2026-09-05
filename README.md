@@ -43,5 +43,17 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 - **Frontend:** [PySide6](https://doc.qt.io/qtforpython-6/) (Qt for Python)
 - **Empaquetado:** [Nuitka](https://nuitka.net/)
 
+### Módulos y bibliotecas utilizados
+
+1. **_platform_**: módulo con la finalidad de extraer información sobre el entorno exacto en el que se está ejecutando el código.
+
+2. **_socket_**: interfaz de bajo nivel para comunicaciones de red. Permite enviar y recibir datos a través de una red local o Internet, utilizando puertos y protocolos fundamentales como TCP o UDP.
+
+3. **_urllib.request_**: módulo de alto nivel diseñado para abrir y leer _urls_. Permite descargar datos de páginas web o interactuar con APIs.
+
+4. **_errno_**: módulo que contiene los códigos de error estándar que devuelve el sistema operativo.
+
+5. **_psutils_**: biblioteca utilizada para extraer información en tiempo real sobre el _hardware_.
+
 ---
 
