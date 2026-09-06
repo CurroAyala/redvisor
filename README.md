@@ -57,5 +57,7 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 6. **_subprocess_**: módulo que sirve para lanzar nuevos procesos y ejecutar comandos externos.
 
+7. **_os_**: módulo que permite interactuar de forma estandarizada con las funciones del sistema operativo
+
 ---
 
