@@ -55,5 +55,7 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 5. **_psutils_**: biblioteca utilizada para extraer información en tiempo real sobre el _hardware_.
 
+6. **_subprocess_**: módulo que sirve para lanzar nuevos procesos y ejecutar comandos externos.
+
 ---
 
