@@ -23,10 +23,9 @@ Muestra la información de red vital del equipo:
 
 ### 2. 📡 Red
 Analiza el entorno de red al que está conectado el equipo:
-- **Información general:** nombre de la red (SSID) y tipo de seguridad.
-- **Auditoría de seguridad:** análisis del nivel de seguridad de la conexión actual.
-- **Escáner de red:** descubre otros dispositivos conectados a la misma red.
-  - *Interacción:* al pulsar sobre un dispositivo vecino, REDvisor escanea y muestra sus puertos abiertos.
+- **Información general:** SSID y protocolo de cifrado si la conexión es Wi-Fi y la máscara de red.
+- **Evaluación de seguridad para conexiones Wi-Fi:** evaluación del nivel de seguridad de la conexión.
+- **Escáner de red:** descubre otros dispositivos conectados a la misma red. Al pulsar sobre un dispositivo, REDvisor escanea y muestra sus puertos abiertos.
 
 ### 3. 🚦 Tráfico y conexiones
 Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`:
