@@ -4,6 +4,7 @@ Módulo dedicado a obtener información sobre la red.
 
 from src.utils import variables, equivalencias, servicios
 from src.core import dispositivo
+from scapy.all import ARP, Ether, srp
 import psutil
 import socket
 import subprocess
@@ -12,6 +13,9 @@ import re
 import ipaddress
 import csv
 import concurrent.futures
+import logging
+
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 
 
 # OBTENER EL NOMBRE (SSID) DE LA RED WIFI
@@ -140,10 +144,6 @@ def evaluar_seguridad(protocolo):
 
 # CONSTANTES
 MAX_HOSTS_DESCUBRIMIENTO            = 512
-MAX_HILOS_DESCUBRIMIENTO            = 200
-PUERTOS_DESCUBRIMIENTO              = [80, 443, 22, 445, 139, 8080, 50, 8009, 62078]
-TIMEOUT_CONEXION_DESCUBRIMIENTO     = 0.8
-TIMEOUT_TOTAL_DESCUBRIMIENTO        = 25
 
 TIMEOUT_BANNER                      = 1.0
 TIMEOUT_CONEXION_PUERTO             = 0.6
@@ -201,56 +201,23 @@ def _limitar_rango_red(red):
  
     return red_recortada, True
 
-def _host_vivo(ip):
+def _descubrimiento_arp(rango_red):
     """
-    Comprueba si un host responde en alguno de los PUERTOS_DESCUBRIMIENTO.
-    Tanto si la conexion se establece (puerto abierto) como si es
-    rechazada activamente (puerto cerrado, pero el host contesta), se
-    considera que el host existe. Si ningun puerto responde en el tiempo
-    dado, se asume que no hay dispositivo en esa IP (o esta detrás de un
-    firewall que descarta todo).
+    Envía un paquete ARP a toda la red indicada.
+    Devuelve un diccionario {ip: mac} con todos los hosts que han respondido.
     """
-    for puerto in PUERTOS_DESCUBRIMIENTO:
-        try:
-            with socket.create_connection((ip, puerto), timeout=TIMEOUT_CONEXION_DESCUBRIMIENTO):
-                return True
-        except ConnectionRefusedError:
-            return True
-        except OSError:
-            continue
-    return False
-
-def _leer_tabla_arp():
-    """
-    Devuelve un diccionario {ip: mac} a partir de la tabla ARP del propio
-    sistema. Para que otro dispositivo aparezca aquí, el equipo debe haberle
-    hablado antes (esto ocurre en el escaneo de dispositivos).
-    """
-    tabla = {}
- 
-    try:
-        if variables.SO == 'Linux':
-            with open('/proc/net/arp', 'r') as f:
-                lineas = f.readlines()[1:]
-            for linea in lineas:
-                columnas = linea.split()
-                if len(columnas) >= 4:
-                    ip, mac = columnas[0], columnas[3]
-                    if mac != '00:00:00:00:00:00':
-                        tabla[ip] = mac.upper()
- 
-        elif variables.SO == 'Windows':
-            salida = subprocess.check_output(['arp', '-a'], text=True)
-            for linea in salida.split('\n'):
-                coincidencia = re.match(r'\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F-]{17})', linea)
-                if coincidencia:
-                    ip = coincidencia.group(1)
-                    mac = coincidencia.group(2).replace('-', ':').upper()
-                    tabla[ip] = mac
-    except Exception:
-        pass
- 
-    return tabla
+    dispositivos_activos= {}
+    
+    paquete = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=str(rango_red))
+    
+    respondidos, _ = srp(paquete, timeout=4, retry=1, verbose=False)
+    
+    for enviado, recibido in respondidos:
+        ip = recibido.psrc
+        mac = recibido.hwsrc.upper()
+        dispositivos_activos[ip] = mac
+        
+    return dispositivos_activos
 
 def _cargar_tabla_fabricantes():
     """
@@ -361,12 +328,12 @@ def _analizar_puerto(ip, puerto):
 # DESCRUBIMIENTO DE DISPOSITIVOS
 def escanear_dispositivos():
     """
-    Realiza un barrido TCP para descubrir los dispositivos activos en la red local,
-    aproximando el tipo de dispositivo o SO a partir del fabricante.
+    Realiza un barrido de peticiones ARP para descubrir los dispositivos
+    activos en la red (o subred) local, aproximando el tipo de dispositivo
+    o sistema operativo a partir del fabricante.
     Devuelve un diccionario con la forma:
         {
             "<ip>": {
-                "ip": "<ip>",
                 "mac": "<mac o 'Desconocida'>",
                 "fabricante": "<fabricante o 'Desconocido'>",
                 "sistema_operativo": "<aproximacion>"
@@ -378,7 +345,6 @@ def escanear_dispositivos():
         }
     """
     dispositivos = {}
-
     red_local = _obtener_red_local()
 
     if red_local is None:
@@ -386,32 +352,13 @@ def escanear_dispositivos():
         return dispositivos
 
     red_a_escanear, recortada = _limitar_rango_red(red_local)
-    candidatos = [str(ip) for ip in red_a_escanear.hosts()]
- 
-    ips_vivas = []
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_HILOS_DESCUBRIMIENTO)
-    try:
-        futuros = {executor.submit(_host_vivo, ip): ip for ip in candidatos}
-        completados, _pendientes = concurrent.futures.wait(
-            futuros, timeout=TIMEOUT_TOTAL_DESCUBRIMIENTO
-        )
-        for futuro in completados:
-            try:
-                if futuro.result():
-                    ips_vivas.append(futuros[futuro])
-            except Exception:
-                pass
-    finally:
-        executor.shutdown(wait=False)
- 
-    tabla_arp = _leer_tabla_arp()
- 
-    for ip in ips_vivas:
-        mac = tabla_arp.get(ip)
+    
+    resultados_arp = _descubrimiento_arp(red_a_escanear)
+    
+    for ip, mac in resultados_arp.items():
         fabricante = _obtener_fabricante(mac)
         dispositivos[ip] = {
-            "ip": ip,
-            "mac": mac if mac else "Desconocida",
+            "mac": mac,
             "fabricante": fabricante,
             "sistema_operativo": _aproximar_so(fabricante)
         }
@@ -419,7 +366,7 @@ def escanear_dispositivos():
     if recortada:
         dispositivos["_aviso"] = (
             f"La red detectada supera los {MAX_HOSTS_DESCUBRIMIENTO} dispositivos; "
-            f"el escaneo se ha limitado a la subred {red_a_escanear} para evitar sobrecargas."
+            f"el escaneo se ha limitado a la subred {red_a_escanear}."
         )
  
     return dispositivos
