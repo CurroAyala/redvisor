@@ -353,7 +353,14 @@ def escanear_dispositivos():
 
     red_a_escanear, recortada = _limitar_rango_red(red_local)
     
-    resultados_arp = _descubrimiento_arp(red_a_escanear)
+    try:
+        resultados_arp = _descubrimiento_arp(red_a_escanear)
+    except PermissionError:
+        dispositivos["_error"] = "Permisos insuficientes. Debes ejecutar la aplicación como administrador para escanear la red."
+        return dispositivos
+    except Exception as e:
+        dispositivos["_error"] = f"Error al escanear la red: {str(e)}"
+        return dispositivos
     
     for ip, mac in resultados_arp.items():
         fabricante = _obtener_fabricante(mac)
@@ -434,9 +441,11 @@ if __name__ == '__main__':
 
     print("> ESCANEO DE RED:")
     for clave, valor in escanear_dispositivos().items():
-        print(f"\t>> {clave}:")
-        for _clave, _valor in valor.items():
-            print(f"\t\t>>> {_clave}: {_valor if _valor!="Desconocida" else "Este dispositivo"}")
+        if type(valor) != str:
+            print(f"\t>> {clave}:")
+            for _clave, _valor in valor.items():
+                print(f"\t\t>>> {_clave}: {_valor if _valor!="Desconocida" else "Este dispositivo"}")
+        else: print(valor)
 
     ip = str(input("> IP A ESCANEAR: "))
     print(f"> ESCANEO DEL DISPOSITIVO <{ip}>")
