@@ -27,9 +27,11 @@ Analiza el entorno de red al que está conectado el equipo:
 - **Evaluación de seguridad para conexiones Wi-Fi:** evaluación del nivel de seguridad de la conexión.
 - **Escáner de red:** descubre otros dispositivos conectados a la misma red. Al pulsar sobre un dispositivo, REDvisor escanea y muestra sus puertos abiertos.
 
-  > **Nota 1**: El escáner también deduce el sistema operativo identificando primero los equipos activos en la red mediante un barrido de puertos para obtener sus direcciones IP. Tras ello, consulta la tabla ARP local para extraer las direcciones MAC asociadas a dichas IPs. Con los primeros caracteres de la MAC (el código OUI), busca el nombre del fabricante de la tarjeta de red en el archivo _oui.csv_ y, finalmente, cruza ese dato con una lista de equivalencias para estimar de forma aproximada qué dispositivo o sistema podría ser.
+  > **Nota 1**: el descubrimiento de dispositivos activos en la red se realiza enviando un mensaje de _broadcast_ a nivel de la capa de enlace a todas las IPs de la red o subred, usando el protocolo **ARP (Address Resolution Protocol)** - encargado de traducir las direcciones lógicas (IP) a direcciones físicas (MAC). En este mensaje se pregunta que a qué dispositivo pertenece cada IP. Si existe un dispositivo con esa IP, su sistema operativo está obligado a responder inmediatamente aportando su dirección MAC, lo que revela su presencia en la red de forma instantánea e ineludible, saltándose las restricciones de los cortafuegos que normalmente bloquean los escaneos de puertos convencionales o los _pings_.
 
-  > **Nota 2**: el reconocimiento del servicio en cada puerto se realiza mediante _banner grabbing_, por lo que el resultado no es completamente fiable. Esta técnica consiste en conectarse a un puerto abierto de un ordenador o servidor para intentar leer el mensaje de bienvenida (el _banner_) o las cabeceras de respuesta que envía el servicio que está escuchando en ese puerto.
+  > **Nota 2**: el escáner también deduce o aproxima - de forma no completamente fiable - el sistema operativo o tipo de dispositivo utilizando la dirección MAC asociada a cada IP obtenida en el barrido. Con los primeros caracteres de la MAC (el código OUI), busca el nombre del fabricante de la tarjeta de red en el archivo _oui.csv_ y, finalmente, cruza ese dato con una lista de equivalencias para estimar de forma aproximada qué dispositivo o sistema podría ser.
+
+  > **Nota 3**: el reconocimiento del servicio en cada puerto se realiza mediante _banner grabbing_, por lo que el resultado no es completamente fiable. Esta técnica consiste en conectarse a un puerto abierto de un ordenador o servidor para intentar leer el mensaje de bienvenida (el _banner_) o las cabeceras de respuesta que envía el servicio que está escuchando en ese puerto.
 
 ### 3. 🚦 Tráfico y conexiones
 Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`:
@@ -56,7 +58,7 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 4. **_errno_**: módulo que contiene los códigos de error estándar que devuelve el sistema operativo.
 
-5. **_psutils_**: biblioteca utilizada para extraer información en tiempo real sobre el _hardware_.
+5. **_psutil_**: biblioteca utilizada para extraer información en tiempo real sobre el _hardware_.
 
 6. **_subprocess_**: módulo que sirve para lanzar nuevos procesos y ejecutar comandos externos.
 
@@ -65,6 +67,10 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 8. **_ipaddress_**: módulo para crear, manipular y validar direcciones y redes de manera estructurada.
 
 9. **_concurrent.futures_**: módulo que permite ejecutar tareas en paralelo o de forma asíncrona, permitiendo que tu programa haga varias cosas a la vez.
+
+10. **_logging__*: módulo estándar para registrar o silenciar mensajes de estado o errores.
+
+12. **_scapy__**: biblioteca que sirve para crear, manipular, enviar y capturar paquetes de red a bajo nivel. Necesita permisos de administrador.
 
 ---
 
