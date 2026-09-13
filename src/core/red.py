@@ -2,13 +2,16 @@
 Módulo dedicado a obtener información sobre la red.
 '''
 
-from src.utils import variables
+from src.utils import variables, equivalencias
 from src.core import dispositivo
 import psutil
 import socket
 import subprocess
 import os
 import re
+import ipaddress
+import csv
+import concurrent.futures
 
 
 # OBTENER EL NOMBRE (SSID) DE LA RED WIFI
@@ -133,6 +136,236 @@ def evaluar_seguridad(protocolo):
 
 
 
+## ESCANEO DE RED ##
+
+# CONSTANTES
+MAX_HOSTS_DESCUBRIMIENTO            = 512
+MAX_HILOS_DESCUBRIMIENTO            = 200
+PUERTOS_DESCUBRIMIENTO              = [80, 443, 22, 445, 139, 8080]
+TIMEOUT_CONEXION_DESCUBRIMIENTO     = 0.25
+TIMEOUT_TOTAL_DESCUBRIMIENTO        = 25
+
+
+# MÉTODOS AUXILIARES
+def _obtener_red_local():
+    """
+    Determina la red local (w.x.y.z/a) a partir de la IP privada y
+    la máscara de red.
+    Devuelve un objeto ipaddress.IPv4Network o None si no se puede determinar.
+    """
+    ip_local = dispositivo.obtener_ip4_privada()
+    mascara = obtener_mascara_red()
+ 
+    if ip_local == "Desconocida" or mascara == "Desconectado":
+        return None
+ 
+    try:
+        return ipaddress.IPv4Interface(f"{ip_local}/{mascara}").network
+    except ValueError:
+        return None
+
+def _limitar_rango_red(red):
+    """
+    Para aevitar desbordamientos, si la red local contiene mas direcciones
+    de las que se consideran seguras de escanear de una sola vez
+    (MAX_HOSTS_DESCUBRIMIENTO), se recorta a una subred mas pequeña que
+    incluya la IP del equipo.
+
+    Devuelve una tupla (red_a_escanear, fue_recortada: bool).
+    """
+    total_direcciones = red.num_addresses
+ 
+    if total_direcciones <= MAX_HOSTS_DESCUBRIMIENTO:
+        return red, False
+ 
+    # Cálculo del prefijo minimo necesario para no superar el limite
+    bits_host = max(1, (MAX_HOSTS_DESCUBRIMIENTO - 1).bit_length())
+    nuevo_prefijo = min(32 - bits_host, 32)
+ 
+    ip_local = dispositivo.obtener_ip4_privada()
+    red_recortada = ipaddress.ip_interface(f"{ip_local}/{nuevo_prefijo}").network
+ 
+    return red_recortada, True
+
+def _host_vivo(ip):
+    """
+    Comprueba si un host responde en alguno de los PUERTOS_DESCUBRIMIENTO.
+    Tanto si la conexion se establece (puerto abierto) como si es
+    rechazada activamente (puerto cerrado, pero el host contesta), se
+    considera que el host existe. Si ningun puerto responde en el tiempo
+    dado, se asume que no hay dispositivo en esa IP (o esta detrás de un
+    firewall que descarta todo).
+    """
+    for puerto in PUERTOS_DESCUBRIMIENTO:
+        try:
+            with socket.create_connection((ip, puerto), timeout=TIMEOUT_CONEXION_DESCUBRIMIENTO):
+                return True
+        except ConnectionRefusedError:
+            return True
+        except OSError:
+            continue
+    return False
+
+def _leer_tabla_arp():
+    """
+    Devuelve un diccionario {ip: mac} a partir de la tabla ARP del propio
+    sistema. Para que otro dispositivo aparezca aquí, el equipo debe haberle
+    hablado antes (esto ocurre en el escaneo de dispositivos).
+    """
+    tabla = {}
+ 
+    try:
+        if variables.SO == 'Linux':
+            with open('/proc/net/arp', 'r') as f:
+                lineas = f.readlines()[1:]
+            for linea in lineas:
+                columnas = linea.split()
+                if len(columnas) >= 4:
+                    ip, mac = columnas[0], columnas[3]
+                    if mac != '00:00:00:00:00:00':
+                        tabla[ip] = mac.upper()
+ 
+        elif variables.SO == 'Windows':
+            salida = subprocess.check_output(['arp', '-a'], text=True)
+            for linea in salida.split('\n'):
+                coincidencia = re.match(r'\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F-]{17})', linea)
+                if coincidencia:
+                    ip = coincidencia.group(1)
+                    mac = coincidencia.group(2).replace('-', ':').upper()
+                    tabla[ip] = mac
+    except Exception:
+        pass
+ 
+    return tabla
+
+def _cargar_tabla_fabricantes():
+    """
+    A partir del archivo <oui.csv> (IEEE), devuelve un diccionario
+    que relaciona el código OUI (primera mitad de la dirección MAC)
+    con un fabricante.
+    """
+    tabla = {}
+
+    directorio_src = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ruta_csv = os.path.join(directorio_src, 'utils', 'oui.csv')
+    if os.path.isfile(ruta_csv):
+        try:
+            with open(ruta_csv, newline='', encoding='utf-8', errors='ignore') as f:
+                lector = csv.DictReader(f)
+                for fila in lector:
+                    prefijo = fila.get('Assignment', '').strip().upper()
+                    nombre = fila.get('Organization Name', '').strip()
+                    if len(prefijo) == 6 and nombre:
+                        tabla[prefijo] = nombre
+        except Exception:
+            pass
+ 
+    return tabla
+
+TABLA_FABRICANTES = _cargar_tabla_fabricantes()
+
+def _obtener_fabricante(mac):
+    """
+    Devuelve el nombre del fabricante asociado al OUI de una MAC.
+    """
+    if not mac:
+        return "Desconocido"
+ 
+    oui = mac.upper().replace(':', '').replace('-', '')[:6]
+    if oui[1] in '26AE': # detectar si es una MAC aleatoria
+        return "MAC generada aleatoriamente"
+
+    return TABLA_FABRICANTES.get(oui, "Desconocido")
+
+def _aproximar_so(fabricante):
+    """
+    Traduce el fabricante de la tarjeta de red a una aproximacion del tipo
+    de sistema operativo o dispositivo.
+    No tratar como dato fiable.
+    """
+    if fabricante == "Desconocido":
+        return "Desconocido"
+ 
+    nombre = fabricante.lower()
+ 
+    for claves, resultado in equivalencias.CLASIFICACION_FABRICANTES:
+        if any(clave in nombre for clave in claves):
+            return resultado
+ 
+    return f"Desconocido (fabricante: {fabricante})"
+
+
+# DESCRUBIMIENTO DE DISPOSITIVOS
+def escanear_dispositivos():
+    """
+    Realiza un barrido TCP para descubrir los dispositivos activos en la red local,
+    aproximando el tipo de dispositivo o SO a partir del fabricante.
+    Devuelve un diccionario con la forma:
+        {
+            "<ip>": {
+                "ip": "<ip>",
+                "mac": "<mac o 'Desconocida'>",
+                "fabricante": "<fabricante o 'Desconocido'>",
+                "sistema_operativo": "<aproximacion>"
+            },
+            ...
+            # Claves opcionales de control (no representan dispositivos):
+            "_error": "<mensaje si algo ha fallado>",
+            "_aviso": "<mensaje si la red se ha recortado por ser muy grande>"
+        }
+    """
+    dispositivos = {}
+
+    red_local = _obtener_red_local()
+
+    if red_local is None:
+        dispositivos["_error"] = "No se ha podido determinar la red local."
+        return dispositivos
+
+    red_a_escanear, recortada = _limitar_rango_red(red_local)
+    candidatos = [str(ip) for ip in red_a_escanear.hosts()]
+ 
+    ips_vivas = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_HILOS_DESCUBRIMIENTO)
+    try:
+        futuros = {executor.submit(_host_vivo, ip): ip for ip in candidatos}
+        completados, _pendientes = concurrent.futures.wait(
+            futuros, timeout=TIMEOUT_TOTAL_DESCUBRIMIENTO
+        )
+        for futuro in completados:
+            try:
+                if futuro.result():
+                    ips_vivas.append(futuros[futuro])
+            except Exception:
+                pass
+    finally:
+        # No se espera a los hilos que pudieran seguir en curso: cada uno
+        # tiene su propio timeout corto, asi que terminaran solos enseguida.
+        executor.shutdown(wait=False)
+ 
+    tabla_arp = _leer_tabla_arp()
+ 
+    for ip in ips_vivas:
+        mac = tabla_arp.get(ip)
+        fabricante = _obtener_fabricante(mac)
+        dispositivos[ip] = {
+            "ip": ip,
+            "mac": mac if mac else "Desconocida",
+            "fabricante": fabricante,
+            "sistema_operativo": _aproximar_so(fabricante)
+        }
+ 
+    if recortada:
+        dispositivos["_aviso"] = (
+            f"La red detectada supera los {MAX_HOSTS_DESCUBRIMIENTO} dispositivos; "
+            f"el escaneo se ha limitado a la subred {red_a_escanear} para evitar sobrecargas."
+        )
+ 
+    return dispositivos
+
+
+
+
 ## CÓDIGO DE DEPURACIÓN ##
 
 if __name__ == '__main__':
@@ -145,3 +378,9 @@ if __name__ == '__main__':
     protocolo = obtener_seguridad_wifi()
     print(f"> PROTOCOLO DE CIFRADO (WIFI): {protocolo}")
     print(f"> EVALUACIÓN DEL PROTOCOLO: {evaluar_seguridad(protocolo)}")
+
+    print("> ESCANEO DE RED:")
+    for clave, valor in escanear_dispositivos().items():
+        print(f"\t>> {clave}:")
+        for _clave, _valor in valor.items():
+            print(f"\t\t>>> {_clave}: {_valor if _valor!="Desconocida" else "Este dispositivo"}")
