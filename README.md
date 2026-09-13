@@ -68,9 +68,9 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 9. **_concurrent.futures_**: módulo que permite ejecutar tareas en paralelo o de forma asíncrona, permitiendo que tu programa haga varias cosas a la vez.
 
-10. **_logging__*: módulo estándar para registrar o silenciar mensajes de estado o errores.
+10. **_logging_**: módulo estándar para registrar o silenciar mensajes de estado o errores.
 
-12. **_scapy__**: biblioteca que sirve para crear, manipular, enviar y capturar paquetes de red a bajo nivel. Necesita permisos de administrador.
+12. **_scapy_**: biblioteca que sirve para crear, manipular, enviar y capturar paquetes de red a bajo nivel. Necesita permisos de administrador.
 
 ---
 
