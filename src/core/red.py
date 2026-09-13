@@ -2,7 +2,7 @@
 Módulo dedicado a obtener información sobre la red.
 '''
 
-from src.utils import variables, equivalencias
+from src.utils import variables, equivalencias, servicios
 from src.core import dispositivo
 import psutil
 import socket
@@ -144,6 +144,20 @@ MAX_HILOS_DESCUBRIMIENTO            = 200
 PUERTOS_DESCUBRIMIENTO              = [80, 443, 22, 445, 139, 8080]
 TIMEOUT_CONEXION_DESCUBRIMIENTO     = 0.25
 TIMEOUT_TOTAL_DESCUBRIMIENTO        = 25
+
+TIMEOUT_BANNER                      = 1.0
+TIMEOUT_CONEXION_PUERTO             = 0.6
+MAX_HILOS_ESCANEO_PUERTOS           = 100
+PUERTOS_ESCANEO = [
+    21, 22, 23, 25, 53, 67, 68, 69, 80, 88, 110, 111, 123, 135, 137, 138,
+    139, 143, 161, 162, 179, 389, 443, 445, 465, 514, 515, 548, 554, 587,
+    631, 636, 873, 993, 995, 1080, 1194, 1433, 1521, 1723, 1883, 2049,
+    2181, 3000, 3128, 3268, 3306, 3389, 3690, 4443, 5000, 5060, 5432,
+    5601, 5900, 5985, 5986, 6379, 6443, 6667, 7001, 7070, 7077, 7443,
+    8000, 8008, 8080, 8081, 8086, 8088, 8090, 8443, 8888, 9000, 9042,
+    9090, 9092, 9200, 9300, 9418, 10000, 11211, 15672, 27017, 27018, 32400
+]
+TIMEOUT_TOTAL_ESCANEO_PUERTOS       = 25
 
 
 # MÉTODOS AUXILIARES
@@ -295,6 +309,55 @@ def _aproximar_so(fabricante):
     return f"Desconocido (fabricante: {fabricante})"
 
 
+def _banner_grabbing(sock):
+    """
+    Intenta identificar el servicio de un puerto ya abierto:
+      1. Escucha pasivamente un breve instante por si el servicio envía un
+         banner nada más conectar (SSH, FTP, SMTP, POP3, IMAP...).
+      2. Si no llega nada, envia una peticion HTTP mínima por si se trata
+         de un servidor web, y lee la cabecera 'Server' de la respuesta.
+    Devuelve el texto encontrado, o None si no se ha podido identificar.
+    """
+    try:
+        sock.settimeout(TIMEOUT_BANNER)
+        datos = sock.recv(256) # banner grabbing pasivo
+        if datos:
+            return datos.decode(errors='ignore').strip().splitlines()[0][:120]
+    except socket.timeout:
+        pass
+    except OSError:
+        return None
+ 
+    try: # banner grabbing activo
+        sock.sendall(b'HEAD / HTTP/1.0\r\n\r\n')
+        sock.settimeout(TIMEOUT_BANNER)
+        datos = sock.recv(512).decode(errors='ignore')
+        for linea in datos.split('\r\n'):
+            if linea.lower().startswith('server:'):
+                return linea.split(':', 1)[1].strip()
+        if datos.startswith('HTTP/'):
+            return "Servidor HTTP (sin cabecera 'Server')"
+    except OSError:
+        pass
+ 
+    return None
+
+def _analizar_puerto(ip, puerto):
+    """Comprueba un unico puerto TCP: si esta abierto, intenta identificar el servicio."""
+    try:
+        with socket.create_connection((ip, puerto), timeout=TIMEOUT_CONEXION_PUERTO) as sock:
+            banner = _banner_grabbing(sock)
+    except OSError:
+        return None
+ 
+    return {
+        "puerto": puerto,
+        "protocolo": "tcp",
+        "servicio": servicios.SERVICIOS_CONOCIDOS.get(puerto, "Desconocido"),
+        "banner": banner
+    }
+
+
 # DESCRUBIMIENTO DE DISPOSITIVOS
 def escanear_dispositivos():
     """
@@ -339,8 +402,6 @@ def escanear_dispositivos():
             except Exception:
                 pass
     finally:
-        # No se espera a los hilos que pudieran seguir en curso: cada uno
-        # tiene su propio timeout corto, asi que terminaran solos enseguida.
         executor.shutdown(wait=False)
  
     tabla_arp = _leer_tabla_arp()
@@ -364,6 +425,51 @@ def escanear_dispositivos():
     return dispositivos
 
 
+# ESCANEO DE PUERTOS
+def escanear_puertos_dispositivo(ip):
+    """
+    Dado un dispositivo de la red (por IP), escanea sus puertos TCP más
+    habituales e intenta identificar el servicio que aloja cada uno.
+ 
+    Devuelve una lista de diccionarios con la forma:
+        [
+            {
+                "puerto": 22,
+                "protocolo": "tcp",
+                "servicio": "ssh",
+                "banner": "SSH-2.0-OpenSSH_8.4p1"
+            },
+            ...
+        ]
+    o una lista vacía si la IP no es válida, el host no responde en ningún
+    puerto comprobado, o todos estan cerrados/filtrados.
+    """
+    puertos_abiertos = []
+ 
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return puertos_abiertos
+ 
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_HILOS_ESCANEO_PUERTOS)
+    try:
+        futuros = [executor.submit(_analizar_puerto, ip, puerto) for puerto in PUERTOS_ESCANEO]
+        completados, _pendientes = concurrent.futures.wait(
+            futuros, timeout=TIMEOUT_TOTAL_ESCANEO_PUERTOS
+        )
+        for futuro in completados:
+            try:
+                resultado = futuro.result()
+                if resultado is not None:
+                    puertos_abiertos.append(resultado)
+            except Exception:
+                pass
+    finally:
+        executor.shutdown(wait=False)
+ 
+    return sorted(puertos_abiertos, key=lambda p: p['puerto'])
+
+
 
 
 ## CÓDIGO DE DEPURACIÓN ##
@@ -384,3 +490,13 @@ if __name__ == '__main__':
         print(f"\t>> {clave}:")
         for _clave, _valor in valor.items():
             print(f"\t\t>>> {_clave}: {_valor if _valor!="Desconocida" else "Este dispositivo"}")
+
+    ip = str(input("> IP A ESCANEAR: "))
+    print(f"> ESCANEO DEL DISPOSITIVO <{ip}>")
+    puertos = escanear_puertos_dispositivo(ip)
+    print(puertos)
+    for puerto in puertos:
+        print(f"\t>> PUERTO {puerto.get("puerto")}")
+        print(f"\t\t>>> PROTOCOLO: {puerto.get("protocolo")}")
+        print(f"\t\t>>> SERVICIO: {puerto.get("servicio")}")
+        print(f"\t\t>>> BANNER: {puerto.get("banner")}")
