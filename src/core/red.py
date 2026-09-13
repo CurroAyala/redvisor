@@ -105,19 +105,19 @@ def evaluar_seguridad(protocolo):
             "color": "orange",
             "descripcion": "Cifrado obsoleto."
         }
+
+    elif "WPA3" in protocolo_upper:
+            return {
+                "riesgo": "Mínimo",
+                "color": "darkgreen",
+                "descripcion": "Máxima seguridad actual."
+            }
     
     elif "WPA2" in protocolo_upper:
         return {
             "riesgo": "Bajo",
             "color": "green",
             "descripcion": "Estándar seguro."
-        }
-        
-    elif "WPA3" in protocolo_upper:
-        return {
-            "riesgo": "Mínimo",
-            "color": "darkgreen",
-            "descripcion": "Máxima seguridad actual."
         }
         
     elif "CABLE" in protocolo_upper:
