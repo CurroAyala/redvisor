@@ -26,7 +26,10 @@ Analiza el entorno de red al que está conectado el equipo:
 - **Información general:** SSID y protocolo de cifrado si la conexión es Wi-Fi y la máscara de red.
 - **Evaluación de seguridad para conexiones Wi-Fi:** evaluación del nivel de seguridad de la conexión.
 - **Escáner de red:** descubre otros dispositivos conectados a la misma red. Al pulsar sobre un dispositivo, REDvisor escanea y muestra sus puertos abiertos.
-  > **Nota**: El escáner también deduce el sistema operativo identificando primero los equipos activos en la red mediante un barrido de puertos para obtener sus direcciones IP. Tras ello, consulta la tabla ARP local para extraer las direcciones MAC asociadas a dichas IPs. Con los primeros caracteres de la MAC (el código OUI), busca el nombre del fabricante de la tarjeta de red en el archivo _oui.csv_ y, finalmente, cruza ese dato con una lista de equivalencias para estimar de forma aproximada qué dispositivo o sistema podría ser.
+
+  > **Nota 1**: El escáner también deduce el sistema operativo identificando primero los equipos activos en la red mediante un barrido de puertos para obtener sus direcciones IP. Tras ello, consulta la tabla ARP local para extraer las direcciones MAC asociadas a dichas IPs. Con los primeros caracteres de la MAC (el código OUI), busca el nombre del fabricante de la tarjeta de red en el archivo _oui.csv_ y, finalmente, cruza ese dato con una lista de equivalencias para estimar de forma aproximada qué dispositivo o sistema podría ser.
+
+  > **Nota 2**: el reconocimiento del servicio en cada puerto se realiza mediante _banner grabbing_, por lo que el resultado no es completamente fiable. Esta técnica consiste en conectarse a un puerto abierto de un ordenador o servidor para intentar leer el mensaje de bienvenida (el _banner_) o las cabeceras de respuesta que envía el servicio que está escuchando en ese puerto.
 
 ### 3. 🚦 Tráfico y conexiones
 Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`:
