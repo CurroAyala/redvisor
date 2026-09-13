@@ -26,6 +26,7 @@ Analiza el entorno de red al que está conectado el equipo:
 - **Información general:** SSID y protocolo de cifrado si la conexión es Wi-Fi y la máscara de red.
 - **Evaluación de seguridad para conexiones Wi-Fi:** evaluación del nivel de seguridad de la conexión.
 - **Escáner de red:** descubre otros dispositivos conectados a la misma red. Al pulsar sobre un dispositivo, REDvisor escanea y muestra sus puertos abiertos.
+  > **Nota**: El escáner también deduce el sistema operativo identificando primero los equipos activos en la red mediante un barrido de puertos para obtener sus direcciones IP. Tras ello, consulta la tabla ARP local para extraer las direcciones MAC asociadas a dichas IPs. Con los primeros caracteres de la MAC (el código OUI), busca el nombre del fabricante de la tarjeta de red en el archivo _oui.csv_ y, finalmente, cruza ese dato con una lista de equivalencias para estimar de forma aproximada qué dispositivo o sistema podría ser.
 
 ### 3. 🚦 Tráfico y conexiones
 Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`:
@@ -56,7 +57,11 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 6. **_subprocess_**: módulo que sirve para lanzar nuevos procesos y ejecutar comandos externos.
 
-7. **_os_**: módulo que permite interactuar de forma estandarizada con las funciones del sistema operativo
+7. **_os_**: módulo que permite interactuar de forma estandarizada con las funciones del sistema operativo.
+
+8. **_ipaddress_**: módulo para crear, manipular y validar direcciones y redes de manera estructurada.
+
+9. **_concurrent.futures_**: módulo que permite ejecutar tareas en paralelo o de forma asíncrona, permitiendo que tu programa haga varias cosas a la vez.
 
 ---
 
