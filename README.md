@@ -33,10 +33,10 @@ Analiza el entorno de red al que está conectado el equipo:
 
   > **Nota 3**: el reconocimiento del servicio en cada puerto se realiza mediante _banner grabbing_, por lo que el resultado no es completamente fiable. Esta técnica consiste en conectarse a un puerto abierto de un ordenador o servidor para intentar leer el mensaje de bienvenida (el _banner_) o las cabeceras de respuesta que envía el servicio que está escuchando en ese puerto.
 
-### 3. 🚦 Tráfico y conexiones
-Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`:
-- **Conexiones salientes:** dominios a los que el equipo intenta conectarse.
-- **Conexiones entrantes:** direcciones IP de los dispositivos externos que intentan conectarse al equipo.
+### 3. 🚦 Tráfico de conexiones
+Monitor de tráfico en tiempo real controlado mediante botones de `Iniciar / Detener captura`. Detecta y clasifica las conexiones de red en entrantes y salientes, identificando la dirección IP remota, el tipo de protocolo utilizado (TCP, UDP o ICMP) y mostrando qué aplicación o proceso está realizando cada conexión.
+
+  > **Nota**: este módulo combina el sondeo periódico de conexiones (TCP/UDP) con la escucha directa a bajo nivel de paquetes (ICMP). Presenta dos limitaciones clave: <br> 1. Conexiones fugaces: Al comprobar las conexiones mediante intervalos de tiempo, la herramienta omitirá cualquier conexión muy breve que se establezca y finalice entre un escaneo y el siguiente. <br> 2. Privilegios de ejecución: Requiere permisos de administrador (tanto en Linux como en Windows) para interceptar el tráfico de bajo nivel y vincular cada conexión a su proceso correspondiente; de lo contrario, el sistema bloqueará la lectura.
 
 ---
 
