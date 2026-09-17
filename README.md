@@ -72,5 +72,11 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 
 12. **_scapy_**: biblioteca que sirve para crear, manipular, enviar y capturar paquetes de red a bajo nivel. Necesita permisos de administrador.
 
+13. **_queue_**: módulo para crear y gestionar colas de datos seguras para la programación concurrente (tareas en paralelo).
+
+14. ** _threading_**: módulo que permite crear y administrar hilos dentro de un mismo proceso, permitiendo ejecutar varias tareas en paralelo.
+
+15. **_struct_**: módulo que sirve para convertir datos nativos de Python en estructuras de bytes puras, y viceversa.
+
 ---
 
