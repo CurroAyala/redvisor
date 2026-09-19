@@ -56,9 +56,21 @@ def obtener_ip6_publica():
         ip6_publica = respuesta.read().decode('utf8').strip()
         return ip6_publica
     except urllib.error.URLError as e:
-        if isinstance(e.reason, OSError) and e.reason.errno in (errno.ENETUNREACH, 10051):
-            return "IPv6 pública no asignada"
-        return "Desconocida"
+        if isinstance(e.reason, OSError):
+            # 101 (ENETUNREACH), 113 (EHOSTUNREACH), 10051 (WSAENETUNREACH)
+            if e.reason.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH, 10051):
+                return "IPv6 pública no asignada."
+        
+        if isinstance(e.reason, (socket.timeout, TimeoutError)):
+            return "IPv6 pública no asignada."
+            
+        # Fallos al resolver direcciones IPv6
+        if isinstance(e.reason, socket.gaierror):
+            return "IPv6 pública no asignada (fallo DNS)."
+        
+        return f"Desconocida ({e.reason})"
+    except TimeoutError:
+        return "IPv6 pública no asignada."
     except Exception:
         return "Desconocida"
 
