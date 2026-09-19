@@ -30,7 +30,7 @@ def obtener_ssid():
             salida_comando = subprocess.check_output(['nmcli', '-t', '-f', 'active,ssid', 'dev', 'wifi'], text=True, env=entorno)
             for linea in salida_comando.split('\n'):
                 if linea.startswith('yes:'):
-                    return linea.split(':')[1].strip()
+                    return linea.split(':', 1)[1].strip()
             return "Conexión por cable / Desconectado"
         
         elif variables.SO == 'Windows':
@@ -39,6 +39,9 @@ def obtener_ssid():
                 if " SSID " in linea and "BSSID" not in linea:
                     return linea.split(':')[1].strip()
             return "Conexión por cable / Desconectado"
+
+        else: return "Sistema operativo no compatible."
+
     except Exception:
         return "Desconectado"
 
@@ -88,6 +91,8 @@ def obtener_seguridad_wifi():
                 return "Sin cifrado"
                 
             return "Conexión por cable / Desconectado"
+
+        else: return "Sistema operativo no compatible."
             
     except Exception:
         return "Desconectado"
@@ -419,7 +424,7 @@ def escanear_puertos_dispositivo(ip):
             except Exception:
                 pass
     finally:
-        executor.shutdown(wait=False)
+        executor.shutdown(wait=False, cancel_futures=True)
  
     return sorted(puertos_abiertos, key=lambda p: p['puerto'])
 
@@ -444,7 +449,7 @@ if __name__ == '__main__':
         if type(valor) != str:
             print(f"\t>> {clave}:")
             for _clave, _valor in valor.items():
-                print(f"\t\t>>> {_clave}: {_valor if _valor!="Desconocida" else "Este dispositivo"}")
+                print(f"\t\t>>> {_clave}: {_valor if _valor!='Desconocida' else 'Este dispositivo'}")
         else: print(valor)
 
     ip = str(input("> IP A ESCANEAR: "))
@@ -452,7 +457,7 @@ if __name__ == '__main__':
     puertos = escanear_puertos_dispositivo(ip)
     print(puertos)
     for puerto in puertos:
-        print(f"\t>> PUERTO {puerto.get("puerto")}")
-        print(f"\t\t>>> PROTOCOLO: {puerto.get("protocolo")}")
-        print(f"\t\t>>> SERVICIO: {puerto.get("servicio")}")
-        print(f"\t\t>>> BANNER: {puerto.get("banner")}")
+        print(f"\t>> PUERTO {puerto.get('puerto')}")
+        print(f"\t\t>>> PROTOCOLO: {puerto.get('protocolo')}")
+        print(f"\t\t>>> SERVICIO: {puerto.get('servicio')}")
+        print(f"\t\t>>> BANNER: {puerto.get('banner')}")
