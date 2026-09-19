@@ -12,13 +12,12 @@ import psutil
 # OBTENER LA IPv4 privada
 def obtener_ip4_privada():
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # AF_INET: estable el tipo de IP en v4
-        # SOCK_DGRAM: define el protocolo de transporte en UDP
-        s.connect(("8.8.8.8", 80))
-        ip4_privada = s.getsockname()[0]
-        s.close()
-        return ip4_privada
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            # AF_INET: estable el tipo de IP en v4
+            # SOCK_DGRAM: define el protocolo de transporte en UDP
+            s.connect(("8.8.8.8", 80))
+            ip4_privada = s.getsockname()[0]
+            return ip4_privada
     except Exception:
         return "Desconocida"
 
@@ -35,14 +34,13 @@ def obtener_ip4_publica():
 # OBTENER LA IPv6 privada
 def obtener_ip6_privada():
     try:
-        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        # AF_INET6: estable el tipo de IP en v6
-        # SOCK_DGRAM: define el protocolo de transporte en UDP
-        s.connect(("2001:4860:4860::8888", 80))
-        # IPv6 de los servidores DNS de Google: 2001:4860:4860::8888
-        ip6_privada = s.getsockname()[0]
-        s.close()
-        return ip6_privada
+        with socket.socket(socket.AF_INET6, socket.SOCK_DGRAM) as s:
+            # AF_INET6: estable el tipo de IP en v6
+            # SOCK_DGRAM: define el protocolo de transporte en UDP
+            s.connect(("2001:4860:4860::8888", 80))
+            # IPv6 de los servidores DNS de Google: 2001:4860:4860::8888
+            ip6_privada = s.getsockname()[0]
+            return ip6_privada
     except OSError as e:
         if e.errno in (errno.ENETUNREACH, 10051):
             return "IPv6 privada no asignada"
@@ -55,10 +53,12 @@ def obtener_ip6_privada():
 def obtener_ip6_publica():
     try:
         respuesta = urllib.request.urlopen('https://6.ident.me', timeout=5)
-        ip6_publica = respuesta.read().decode('utf8')
+        ip6_publica = respuesta.read().decode('utf8').strip()
         return ip6_publica
     except urllib.error.URLError as e:
-        return "IPv6 pública no asignada"
+        if isinstance(e.reason, OSError) and e.reason.errno in (errno.ENETUNREACH, 10051):
+            return "IPv6 pública no asignada"
+        return "Desconocida"
     except Exception:
         return "Desconocida"
 
@@ -88,7 +88,7 @@ def obtener_puertos_abiertos():
 
     try: 
         conexiones = psutil.net_connections(kind='inet')
-    except psutil.AccessDenied:
+    except (psutil.AccessDenied, OSError):
         return puertos
 
     for conn in conexiones:
