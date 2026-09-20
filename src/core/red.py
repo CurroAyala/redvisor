@@ -278,7 +278,7 @@ def _aproximar_so(fabricante):
         if any(clave in nombre for clave in claves):
             return resultado
  
-    return f"Desconocido (fabricante: {fabricante})"
+    return f"Desconocido"
 
 
 def _banner_grabbing(sock):
