@@ -116,7 +116,7 @@ sudo .venv/bin/python main.py (Linux)
 python main.py (Recomendado: iniciar la consola como administrador)
 ```
 
-### [Opción 2] Descargar ejecutable
+### [Opción 2] Descargar ejecutable.
 
 #### Windows:
 
