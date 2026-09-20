@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/Python-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/PySide6-green.svg?style=for-the-badge&logo=qt&logoColor=white" alt="PySide6">
   <img src="https://img.shields.io/badge/OS-Linux%20%7C%20Windows-lightgrey.svg?style=for-the-badge&logo=linux&logoColor=white" alt="OS">
-  <img src="https://img.shields.io/badge/Status-En%20Desarrollo-orange.svg?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/Status-Estable-success.svg?style=for-the-badge" alt="Status">
 </div>
 
 <br>
@@ -116,3 +116,28 @@ sudo .venv/bin/python main.py (Linux)
 python main.py (Recomendado: iniciar la consola como administrador)
 ```
 
+### [Opción 2] Descargar ejecutable
+
+#### Windows:
+
+1. Descargar ejecutable (ver sección _Releases_).
+
+2. Ejecutar.
+
+3. En la primera ejecución, es probable que _Windows Defender_ bloquee el programa. Para evitar esto, **hacer clic** en la notificación de _Windows Defender_ (si la ha habido) o **abrir** _Seguridad de Windows_ e ir a _Protección antivirus y contra amenazas_ > _Historial de protección_. En la entrada más reciente (aceptar el aviso de administración para ver los detalles), **desplegar** el menú de acciones y **seleccionar** _Permitir_.
+
+#### Fedora 42 en adelante y Arch Linux (y derivados):
+
+> Nota: en general, se podrá instalar en distribuciones de Linux con la versión de _glibc_ (GNU C Library) 2.42 en adelante. Comprobar con: ```ldd --version```
+
+1. Descargar y descomprimir el archivo _redvisor-linux.zip_ (ver sección _Releases_).
+
+2. Ejecutar **_install.sh_** para instalar el programa y **_uninstall.sh_** para desinstalarlo.
+    - Doble _click_ sobre el script.
+    - A través de consola:
+      ```
+      ./install.sh (para instalar)
+      ./uninstall.sh (para desinstalar)
+      ```
+
+3. (Opcional) Borrar la carpeta descargada.
