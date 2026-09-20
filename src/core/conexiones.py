@@ -38,7 +38,7 @@ class EventoConexion:
     protocolo: Protocolo
     sentido: Sentido
     ip_remota: str
-    pid: str = ""
+    pid: str = "Desconocido"
     proceso: str = "Desconocido"
 
     def __str__(self) -> str:
@@ -116,9 +116,9 @@ def _localizar_proceso(
                     return conn.pid, psutil.Process(conn.pid).name()
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     return conn.pid, "Inaccesible"
-    except psutil.AccessDenied:
+    except (psutil.AccessDenied, OSError):
         pass
-    return None
+    return None, "Desconocido"
 
 
 # MÉTODO PRINCIPAL (TCP y UDP)
@@ -147,6 +147,7 @@ def monitorizar_puertos(
             protocolo=Protocolo.TCP_UDP,
             mensaje=f"Error inesperado: {exc}"
         ))
+        return
 
     while not evento_parada.is_set():
         evento_parada.wait(timeout=espera)
@@ -182,7 +183,7 @@ def monitorizar_puertos(
                 protocolo=Protocolo.TCP_UDP,
                 sentido=sentido,
                 ip_remota=ip_remota,
-                pid=pid_asociado,
+                pid=str(pid_asociado) if pid_asociado is not None else "Desconocido",
                 proceso=proceso_asociado
             ))
 
@@ -267,6 +268,7 @@ def monitorizar_icmp(
             protocolo=Protocolo.ICMP,
             mensaje=f"Error inesperado al abrir socket ICMP: {exc}."
         ))
+        return
 
     try:
         while not evento_parada.is_set():
