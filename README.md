@@ -5,7 +5,10 @@
   <img src="https://img.shields.io/badge/Status-En%20Desarrollo-orange.svg?style=for-the-badge" alt="Status">
 </div>
 
-# REDvisor 
+<br>
+<br>
+
+<img src="assets/logo_1.jpg" alt="Logo Redvisor" width="150">
 
 **REDvisor** es una aplicación nativa para Linux y Windows diseñada para monitorizar, auditar y gestionar la información de red de un dispositivo. Actúa como un inspector de conexiones centralizado que permite conocer la huella digital, analizar el entorno de red local y rastrear el tráfico en tiempo real.
 
@@ -79,4 +82,37 @@ El desarrollo de REDvisor se apoya en tecnologías eficientes y modernas para en
 15. **_struct_**: módulo que sirve para convertir datos nativos de Python en estructuras de bytes puras, y viceversa.
 
 ---
+
+## Instalación
+
+> ❗ IMPORTANTE: para equipos con Windows, es necesario tener instalado el controlador **_npcap_** [https://npcap.com/] para el escaneo de red. A la hora de instalarlo, marcar la casilla _Install Npcap in WinPcap API-compatible Mode_.
+
+### [Opción 1] Clonación del repositorio.
+
+1. Clonar repositorio:
+```
+git clone https://github.com/CurroAyala/redvisor
+```
+
+2. Crear entorno virtual de Python:
+```
+python -m venv .venv
+```
+
+3. Acceder al entorno virtual:
+```
+source .venv/bin/activate (Linux)
+source .\.venv\Scripts\Activate.ps1 (Windows Powershell)
+```
+
+4. Instalar dependencias:
+```
+pip install -r requirements.txt
+```
+
+6. Iniciar aplicación:
+```
+sudo .venv/bin/python main.py (Linux)
+python main.py (Recomendado: iniciar la consola como administrador)
+```
 
